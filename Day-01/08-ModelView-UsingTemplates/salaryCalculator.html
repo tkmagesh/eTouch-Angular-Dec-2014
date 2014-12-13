@@ -110,7 +110,11 @@
 
 	//View
 	$(function(){
-		
+		window.calc = new SalaryCalculator();
+		window.calcView = new SalaryCalculatorView(calc);
+
+		calcView.init();
+		calcView.render().$root.appendTo(document.body);
 		
 	});
 	</script>
