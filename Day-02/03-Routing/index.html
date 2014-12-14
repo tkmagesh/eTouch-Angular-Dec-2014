@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" data-ng-app="routingApp">
+<head>
+	<meta charset="UTF-8">
+	<title>Routing</title>
+	<script src="angular.js"></script>
+	<script src="angular-route.js"></script>
+	<script>
+	angular.module("routingApp", ["ngRoute"])
+		.provider("taskStorage", function taskStorageProvider(){
+			var _storageOption = "localStorage";
+			this.setStorage = function(storageOption){
+				_storageOption = storageOption;
+			}
+			this.$get = function($window){
+				storage = $window[_storageOption];
+				return {
+					getAll : function(){
+						console.log("Data is retrived from ", storage);
+					}
+				}
+			};
+		})
+		.config(function($routeProvider, taskStorageProvider){
+			taskStorageProvider.setStorage("sessionStorage");
+			$routeProvider
+				.when("/products/:productId", {
+					//template : "<h2>Products</h2>"
+					templateUrl : "templates/products.tmpl.html",
+					controller : "productsController"
+				})
+				.when("/customers/:customerId", {
+					//template : "<h2>Customers</h2>"
+					templateUrl : "templates/customers.tmpl.html",
+					controller : "customersController"
+				})
+				.otherwise({
+					redirectTo: "/products/P101"
+				});
+		})
+		.controller("productsController", function($scope, $routeParams, taskStorage){
+			taskStorage.getAll();
+			console.log($routeParams);
+			$scope.message = "Information about product " + $routeParams.productId + " is expected here";
+		})
+		.controller("customersController", function($scope, $routeParams){
+			console.log($routeParams);
+			$scope.message = "Information about customer " + $routeParams.customerId + " is expected here";
+		})
+	</script>
+</head>
+<body>
+	<h1>Routing Demo</h1>
+	<a href="#/products/P102">Products</a>
+	<br>
+	<a href="#/customers/C105">Customers</a>
+	<hr>
+	<ng-view></ng-view>
+</body>
+</html>
