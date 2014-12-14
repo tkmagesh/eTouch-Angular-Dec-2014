@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="taskApp">
+<head>
+	<meta charset="UTF-8">
+	<title>Task Manager</title>
+	<style>
+	.completed{
+		color : red;
+		text-decoration: line-through;
+		font-style: italic;
+		font-weight: bold;
+	}
+	.taskDate{
+		font-size: small;
+	}
+	ol{
+		width: 50%;
+	}
+	li {
+		list-style: none;
+		border : 1px solid black;
+		background-color: #eee;
+		padding : 4px;
+		margin: 4px;
+	}
+
+	h1{
+		margin: 0px;
+		margin-bottom : 10px;
+		border : 2px solid blue;
+		padding: 10px;
+		background-color: lightblue;
+	}
+	</style>
+	<script src="angular.js"></script>
+	<script src="moment.js"></script>
+	<script>
+
+	angular.module('utils',[]);
+
+	angular.module("utils").value("momentApi", moment);
+	angular.module("utils").value("defaultLengthLimit", 10);
+	angular.module("utils").filter("toMoment", function(momentApi){
+		return function(data){
+			data = data || "";
+			return momentApi(data).fromNow();
+		}
+	});
+
+	angular.module("utils").filter("truncate", function(defaultLengthLimit){
+		return function(data, lengthLimit){
+			data = data || "";
+			lengthLimit = lengthLimit || defaultLengthLimit;
+			return data.length < lengthLimit ? data : data.substr(0,lengthLimit) + "...";
+		}
+	});
+
+
+	angular.module("taskApp", ["utils"]);
+	angular.module("taskApp").value("defaultLengthLimit", 20);
+	angular.module("taskApp").service("taskStorage" , function TaskStorage(Task, $window){
+		var storage = $window.localStorage;
+		console.log("Task storatg is created!");
+		this.save = function(task){
+			storage.setItem(task.id, JSON.stringify(task));	
+		};
+		this.remove = function(task){
+			storage.removeItem(task.id);
+		};
+		this.getAll = function(){
+			var result = [];
+			for(var i=0;i<storage.length;i++){
+				var key = storage.key(i);
+				var taskAsString = storage.getItem(key);
+				var taskDefaults = $window.JSON.parse(taskAsString);
+				result.push(new Task(taskDefaults));
+			}
+			return result;
+		}
+
+	});
+
+
+	angular.module("taskApp").factory("Task", function(){
+		function Task(defaults){
+			this.id = defaults.id || new Date().getTime().toString();
+			this.name = defaults.name || "";
+			this.isCompleted = defaults.isCompleted || false;
+			this.category = defaults.category || "Personal";
+			this.createdAt = defaults.createdAt || new Date();
+		}
+		Task.prototype.toggle = function(){
+			this.isCompleted = !this.isCompleted;
+		}
+		return Task;
+	});
+
+	angular.module("taskApp").controller("taskController", function taskController($scope, taskStorage, Task){
+		//var storage = new TaskStorage();
+
+		$scope.tasks = taskStorage.getAll();
+		
+		$scope.addTask = function(taskName, taskCategory){
+			var newTask = new Task({ name : taskName, category : taskCategory});
+			taskStorage.save(newTask);
+			$scope.tasks.push(newTask);
+		}
+
+		$scope.toggle = function(task){
+			task.toggle();
+			taskStorage.save(task);
+		};
+
+		$scope.removeCompleted = function(){
+			for(var i=$scope.tasks.length-1;i>=0;i--){
+				var task = $scope.tasks[i];
+				if (task.isCompleted){
+					taskStorage.remove(task);
+					$scope.tasks.splice(i,1);
+				}
+			}
+		}
+
+		$scope.categories = [
+			"Personal",
+			"Official",
+			"Recreational"
+		]
+		
+	});
+	
+	</script>
+</head>
+<body >
+	<h1>Task Manager</h1>
+	
+	<div data-ng-controller="taskController">
+		<div>
+			<input type="range" name="" id="" min="5" max="30" ng-model="taskNameLimit"><span>{{taskNameLimit}}</span>
+		</div>
+		<label for="">Task :</label>
+		<input type="text" data-ng-model="name">
+		<select data-ng-model="taskCategory" data-ng-init="taskCategory='Personal'">
+			<option data-ng-repeat="category in categories">{{category}}</option>
+		</select>
+		<input type="button" value="Add Task" data-ng-click="addTask(name, taskCategory)">
+		<input type="button" value="Remove Completed" data-ng-click="removeCompleted()">
+		<div data-ng-repeat="category in categories">
+			<h2>{{category}}</h2>
+			<ol>
+				<li 
+					data-ng-repeat="task in tasks" data-ng-if="task.category === category">
+					<div> 
+						<div  data-ng-click="toggle(task)"
+					data-ng-class="{completed : task.isCompleted}"
+					>{{task.name |truncate }}
+						</div>
+						<div class="taskDate">
+							<i>{{task.createdAt | toMoment}}</i>
+						</div>
+					</div> 
+				</li>
+			</ol>
+		</div>
+		
+		
+	</div>
+	
+</body>
+</html>
